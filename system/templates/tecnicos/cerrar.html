@@ -1,0 +1,54 @@
+{% extends "base_tec.html" %}
+
+{% block contenido %}
+<div class="container">
+    <h2 class="mt-5 mb-4">Servicios Abiertos</h2>
+</div>
+{% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                    <div class="alert {{ message.tags }}" role="alert">
+                      {{ message }}
+                    </div>
+                  {% endfor %}
+                </div>
+                {% endif %}
+
+    {% if servicios_abiertos %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Nombre Solicitante</th>
+                    <th>Descripción</th>
+                    <th>Problema</th>
+                    <th>Área Solicitante</th>
+                    <th>Fecha de Creación</th>
+                    <th>Detalles</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for servicio in servicios_abiertos %}
+                    <tr>
+                        <td>{{ servicio.nombreSolicitante }}</td>
+                        <td>{{ servicio.descripcion }}</td>
+                        <td>{{ servicio.problema }}</td>
+                        <td>{{ servicio.areaSolicitante }}</td>
+                        <td>{{ servicio.fechaCreacion }}</td>
+                        <td>
+                            
+                            <form method="post" action="{% url 'cerrar_servicio' %}" class="form-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="servicio_id" value="{{ servicio.id }}" class="form-control mr-2">
+                                <input type="text" name="comentario" placeholder="Agregar comentario..." class="form-control mr-2">
+                                <button type="submit" class="btn btn-primary">Cerrar</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No tienes servicios abiertos en este momento.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends "base_admin.html" %}
+{% load static %}
+
+{% block scripts %}
+<script src="{% static 'js/limpiar_messages.js' %}"></script>
+{% endblock %}
+{% block contenido %}
+<section class="p-3 p-md-4 p-xl-5">
+    <div class="container">
+        <div class="card border-light-subtle shadow-sm">
+            <div class="card-body p-3 p-md-4 p-xl-5">
+                <div class="row">
+                    <div class="col-12">
+                        <h3>Cree a un nuevo usuario:</h3>
+                    </div>
+                </div>
+                {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                    <div class="alert {{ message.tags }}" role="alert">  {{ message }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                <form method="post" action="{% url 'registro' %}">
+                    {% csrf_token %}
+                    <div class="row gy-3 gy-md-4 overflow-hidden">
+                        <div class="col-md-6">
+                            <label for="id_nombres" class="form-label">Nombre:</label>
+                            <input type="text" class="form-control" name="nombres" id="id_nombres" placeholder="Nombre" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_apellidos" class="form-label">Apellido:</label>
+                            <input type="text" class="form-control" name="apellidos" id="id_apellidos" placeholder="Apellido" required>
+                        </div>
+                        <div class="col-12">
+                            <label for="id_username" class="form-label">Nombre de usuario:</label>
+                            <input type="text" class="form-control" name="username" id="id_username" placeholder="Ingrese un nombre de usuario único" required>
+                        </div>
+                        <div class="col-12">
+                            <label for="id_contraseña" class="form-label">Contraseña:</label>
+                            <input type="password" class="form-control" name="contraseña" id="id_contraseña" placeholder="Contraseña" required>
+                        </div>
+                        <div class="col-12">
+                            <label for="id_rol" class="form-label">Rol:</label>
+                            <select class="form-control" name="rol" id="id_rol" required>
+                                <option value="" disabled selected>Selecciona tu rol</option>
+                                {% for key, value in form.fields.rol.choices %}
+                                    <option value="{{ key }}">{{ value }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                                                
+                        <div class="col-12">
+                            <label for="id_area" class="form-label">Área:</label>
+                            <select class="form-control" name="area" id="id_area" required>
+                                <option value="" selected disabled>Selecciona tu área</option>
+                                {% for area in form.fields.area.queryset %}
+                                    <option value="{{ area.pk }}">{{ area.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        
+                        <div class="col-12">
+                            <div class="d-grid">
+                                <button class="btn bsb-btn-xl btn-primary" type="submit">Crear Usuario</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

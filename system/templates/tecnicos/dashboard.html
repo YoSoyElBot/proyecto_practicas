@@ -1,0 +1,34 @@
+{% extends "base_tec.html" %}
+
+{% block contenido %}
+<div class="container">
+    <h2 class="mt-5 mb-4">Servicios Asignados</h2>
+
+    {% if servicios_asignados %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Nombre Solicitante</th>
+                    <th>Descripción</th>
+                    <th>Problema</th>
+                    <th>Área Solicitante</th>
+                    <th>Fecha de Creación</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for servicio in servicios_asignados %}
+                    <tr>
+                        <td>{{ servicio.nombreSolicitante }}</td>
+                        <td>{{ servicio.descripcion }}</td>
+                        <td>{{ servicio.problema }}</td>
+                        <td>{{ servicio.areaSolicitante }}</td>
+                        <td>{{ servicio.fechaCreacion }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No tienes servicios asignados en este momento.</p>
+    {% endif %}
+</div>
+{% endblock %}

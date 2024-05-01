@@ -1,0 +1,36 @@
+{% extends "base_supervisor.html" %}
+
+{% block contenido %}
+<div class="container">
+    <h2 class="mt-5 mb-4">Lista de Técnicos</h2>
+
+    {% if tecnicos %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Correo Electrónico</th>
+                    <th>Rol</th>
+                    <th>Área de Trabajo</th>
+                    <th>Carga de Trabajo</th>
+                    <th>Disponibilidad</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tecnico in tecnicos %}
+                    <tr>
+                        <td>{{ tecnico.username }}</td>
+                        <td>{{ tecnico.email }}</td>
+                        <td>{{ tecnico.rol }}</td>
+                        <td>{{ tecnico.area.nombreArea }}</td>
+                        <td>{{ tecnico.cargaTrabajo }}</td>
+                        <td>{{ tecnico.disponibilidad }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No hay técnicos registrados en este momento.</p>
+    {% endif %}
+</div>
+{% endblock %}
