@@ -39,6 +39,8 @@ urlpatterns = [
 
     path('agregar/' , views.agregar_usuario, name='agregar'),
 
+    path('' , views.user_index, name= 'user_index'),
+
     path('user_index/' , views.user_index, name= 'user_index'),
 
     path('servicio/' , views.crear_servicio, name='crear_servicio'),
