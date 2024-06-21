@@ -204,18 +204,21 @@ def dashboard_tecnico(request):
     # Renderizar la plantilla del dashboard y pasar los servicios asignados como contexto
     return render(request, 'dashboard.html', {'servicios_asignados': servicios_asignados})
 
+
 def alta_area(request):
     if request.method == 'POST':
         form = AltaAreaForm(request.POST)
         if form.is_valid():
-            area = form.save()
+            nombre_area = form.cleaned_data['area']
+            area = Area(nombre=nombre_area)
+            area.save()  # Guardamos la instancia del modelo
             messages.success(request, 'Área creada exitosamente!')
-            return redirect('nombre_de_la_vista')  # Reemplaza 'nombre_de_la_vista' con el nombre de la vista a la que quieres redirigir
+        else:
+            messages.error(request, 'No se ha podido crear el área')
     else:
         form = AltaAreaForm()
     return render(request, 'altaarea.html', {'form': form})
 ################ VISTA PARA DAR DE ALTA PROBLEMAS ###########################
-
 @rol_requerido('administrador')
 @login_required(login_url='login')
 def alta_problemas(request):
@@ -294,7 +297,7 @@ def crear_usuario_ti(request):
                 # Mensaje de éxito con el nombre de usuario
                 messages.success(request, f'Usuario "{username}" creado exitosamente!')
             except Exception as e:
-                messages.error(request, f'Error al crear el usuario: {e}')
+                messages.error(request, f'Error al crear el usuario')
         else:
             messages.error(request, 'Por favor corrige los errores en el formulario.')
     else:
