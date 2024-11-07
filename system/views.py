@@ -1,6 +1,6 @@
 from system import settings
 import secrets
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.contrib.auth.decorators import login_required
 from functools import wraps
 from django.shortcuts import render, redirect
@@ -8,11 +8,11 @@ from django.contrib.auth import authenticate, login
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.models import User, Group
-from user.models import UserTI, AreaTI
-from userCongreso.models import Area, Servicio, Usuario, Problema
+from usuario.models import usuarioCC
+from usuarioFEI.models import Area, Servicio, Problemas
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render, redirect
-from system.forms import FormUserTICreationForm, LoginForm, AltaAreaForm, UsuarioCongresoForm, ServicioForm, ProblemaForm, CambioContraseñaForm
+from system.forms import FormUsuarioCC, LoginForm, AltaAreaForm,ServicioForm, ProblemaForm, ServicioFormExtra, BajaAreaForm, BajaUsuarioForm, LoginForm2, BajaProblemaForm,LoginForm3
 from django.contrib.auth import logout
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
@@ -20,23 +20,54 @@ from django.contrib import messages
 from django.shortcuts import render, redirect
 from datetime import datetime
 from django.views.decorators.csrf import requires_csrf_token
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from .forms import CerrarServicioForm
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.hashers import make_password
+from django.shortcuts import render, redirect
+from .forms import CambioContraseñaForm
+from django.core.mail import send_mail
+import random
+import string
+from django.db import transaction
+from datetime import datetime, timezone
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from django.utils.dateparse import parse_date
+from django.contrib import messages
+from django.utils import timezone
+from django.contrib import messages
+from datetime import datetime, timedelta
+import ldap
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from usuario.models import usuarioCC, Rol
+from django.urls import reverse
+from django.views.decorators.cache import never_cache
 
 
 
 
 ##################### VISTAS DE FUNCIONALIDADES ###############################################333
-def rol_requerido(rol):
+from functools import wraps
+from django.shortcuts import redirect
+
+def rol_requerido(rol_nombre):
     def decorator(view_func):
         @wraps(view_func)
         def wrapper(request, *args, **kwargs):
             # Verificar si el usuario está autenticado
             if not request.user.is_authenticated:
-                return redirect('login')  # Redireccionar a la página de inicio de sesión si el usuario no ha iniciado sesión
+                return redirect('ldap_login')  # Redirige a la página de inicio de sesión si el usuario no ha iniciado sesión
 
             # Verificar si el usuario tiene el rol adecuado
-            if request.user.rol != rol:
-                # Puedes personalizar este mensaje de error según tus necesidades
-                return redirect('error')  # Cambia 'pagina_de_inicio' por la URL de tu página de inicio
+            if not request.user.rol or request.user.rol.nombre != rol_nombre:
+                # Si el usuario no tiene un rol o el rol no coincide, redirigir
+                return redirect('error')  # Redirige a una página de error o la que prefieras
 
             # Si el usuario está autenticado y tiene el rol adecuado, ejecutar la vista original
             return view_func(request, *args, **kwargs)
@@ -46,385 +77,594 @@ def rol_requerido(rol):
     return decorator
 
 ######################## VISTA PARA MATAR LA COOKIE DE SESION DE LOS USUARIOS ##########################
+
+
+
 def cerrar_sesion(request):
-    logout(request)  
-    return redirect('/login/')
+    logout(request)
+    response = redirect('/login2/')
+    response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    return response
+
+#def cerrar_sesion(request):
+#   logout(request)  
+#   return redirect('/login2/')
+
+
+def cerrar_sesion2(request):
+    logout(request)
+    response = redirect('/login/')
+    response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    return response
+
+#def cerrar_sesion2(request):
+#    logout(request)  
+#    return redirect('/login/')
 
 ############# VISTA PARA MOSTRAR LOS ERRORES DE USUARIO ###########
 def errores(request):
     return render(request, 'errores.html')
 
-########################## VISTA PARA LOGUEARSE AL SISTEMA DEPENDIENDO DE SU ROL, ESTA FUNCION UTILIZADA 
-def login_view(request):
+
+
+########## vista de login para LDAP ############
+def ldap_login_view(request):
     if request.method == 'POST':
-        form = LoginForm(request.POST)
+        form = LoginForm2(request.POST)
         if form.is_valid():
-            username = form.cleaned_data['username']
+            email = form.cleaned_data['email']
             password = form.cleaned_data['password']
-            user = authenticate(request, username=username, password=password)
-            if user is not None:
+            
+            # Verificar si el usuario existe en la base de datos de Django
+            try:
+                user = usuarioCC.objects.get(email=email)  # Cambiar User a usuarioCC
+            except usuarioCC.DoesNotExist:
+                # Si no está en la base de datos, mostrar error
+                messages.error(request, 'El usuario no está registrado en el sistema.')
+                return render(request, 'login2.html', {'form': form})
+
+            # Si el usuario está en la base de datos, proceder con la autenticación LDAP
+            LDAP_SERVER = 'ldap://148.226.12.10'  # Cambia a LDAPS si es necesario
+            
+            try:
+                # Inicializar la conexión LDAP
+                ldap_client = ldap.initialize(LDAP_SERVER)
+                ldap_client.set_option(ldap.OPT_PROTOCOL_VERSION, 3)
+                ldap_client.set_option(ldap.OPT_REFERRALS, 0)
+                ldap_client.simple_bind_s(email, password)
+
+                # Autenticación exitosa en LDAP, iniciar sesión al usuario en Django
                 login(request, user)
-                # Redireccionar según el rol del usuario
-                if user.rol == 'tecnico':
-                    return redirect('tec_index')  # Cambia 'tec_index' por la URL del técnico
-                elif user.rol == 'administrador':
-                    return redirect('admin_index')  # Cambia 'admin_index' por la URL del administrador
-                elif user.rol == 'supervisor':
-                    return redirect('supervisor_index')
+
+                # Redirigir según el rol del usuario
+                if user.rol and user.rol.nombre == 'Técnico Académico':
+                    return redirect('tec_index')
+                elif user.rol and user.rol.nombre == 'Administrador':
+                    return redirect('servicios_dashboard_act')
+                elif user.rol and user.rol.nombre == 'Servicio Social':
+                    return redirect('servicios_dashboard_act_serv')
                 else:
-                    # Rol no reconocido, muestra un mensaje de error
                     messages.error(request, 'Rol de usuario no reconocido.')
-            else:
-                messages.error(request, 'Nombre de usuario o contraseña incorrectos.')
+
+            except ldap.INVALID_CREDENTIALS:
+                messages.error(request, 'Credenciales inválidas. Por favor, intente de nuevo.')
+            except ldap.SERVER_DOWN:
+                messages.error(request, 'No se puede conectar al servidor LDAP.')
+            except ldap.LDAPError as e:
+                messages.error(request, f'Error LDAP: {str(e)}')
+            finally:
+                ldap_client.unbind()
     else:
-        form = LoginForm()
+        form = LoginForm2()
+
+    return render(request, 'login2.html', {'form': form})
+
+############## vista para el login de los usuarios que levantaran servicios #####
+def ldap_login3_view(request):
+    if request.method == 'POST':
+        form = LoginForm2(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            password = form.cleaned_data['password']
+
+            # Excluir usuarios con el correo terminado en @estudiantes.uv.mx
+           # if email.endswith('@estudiantes.uv.mx'):
+           #     messages.error(request, 'El acceso está restringido para correos de estudiantes.')
+           #     return render(request, 'login3.html', {'form': form})
+
+            # Verificar si el usuario existe en la base de datos de Django
+            try:
+                user = usuarioCC.objects.get(email=email)  # Cambiar User a usuarioCC
+            except usuarioCC.DoesNotExist:
+                messages.error(request, 'El usuario no está registrado en el sistema.')
+
+            # Conexión al servidor LDAP
+            LDAP_SERVER = 'ldap://148.226.12.10'  # Cambia a LDAPS si es necesario
+            
+            try:
+                # Inicializar la conexión LDAP
+                ldap_client = ldap.initialize(LDAP_SERVER)
+                ldap_client.set_option(ldap.OPT_PROTOCOL_VERSION, 3)
+                ldap_client.set_option(ldap.OPT_REFERRALS, 0)
+                ldap_client.simple_bind_s(email, password)
+
+                # Autenticación exitosa en LDAP, iniciar sesión al usuario en Django
+                login(request, user)
+
+                # Redirigir a user_index después de la autenticación exitosa
+                return redirect('solicitar_servicio_user')
+
+            except ldap.INVALID_CREDENTIALS:
+                messages.error(request, 'Credenciales inválidas. Por favor, intente de nuevo.')
+            except ldap.SERVER_DOWN:
+                messages.error(request, 'No se puede conectar al servidor LDAP.')
+            except ldap.LDAPError as e:
+                messages.error(request, f'Error LDAP: {str(e)}')
+            finally:
+                ldap_client.unbind()
+
+    else:
+        form = LoginForm3()
+
     return render(request, 'login.html', {'form': form})
 
 ############## VISTA PARA TRATAR LOS ERRORES CSRF ########################3
-
-
 def csrf_error_view(request):
     # Aquí puedes renderizar una página de error CSRF personalizada
     return render(request, 'csrf.html')
 
 
 
-########################## VISTAS DE TECNICO ##################################
-@rol_requerido('tecnico')
-@login_required(login_url='login')
-def tec_index(request):
-    return render(request, 'tec_index.html')
-
-from django.shortcuts import render
-
-@rol_requerido('tecnico')
-@login_required(login_url='login')
-def dashboard_tecnico(request):
-    # Obtener el usuario actualmente autenticado
-    usuario_actual = request.user
-
-    # Obtener los servicios asignados al usuario actual
-    servicios_asignados = Servicio.objects.filter(responsable=usuario_actual)
-
-    # Renderizar la plantilla del dashboard y pasar los servicios asignados como contexto
-    return render(request, 'dashboard.html', {'servicios_asignados': servicios_asignados})
-
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from .forms import CerrarServicioForm
-
-
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-
-@rol_requerido('tecnico')
-@login_required(login_url='login')
-def servicios_abiertos(request):
-    # Obtener los servicios asignados al usuario actual que estén en estado "abierto"
-    servicios_abiertos = Servicio.objects.filter(responsable=request.user, estado='abierto')
-
-    # Pasar los servicios asignados como contexto al template 'servicios_abiertos.html'
-    return render(request, 'servicios_abiertos.html', {'servicios_abiertos': servicios_abiertos})
-
-@rol_requerido('tecnico')
-@login_required(login_url='login')
-def cerrar_servicio(request):
-    if request.method == 'POST':
-        servicio_id = request.POST.get('servicio_id')
-        servicio = Servicio.objects.get(pk=servicio_id, responsable=request.user, estado='abierto')
-        comentario = request.POST.get('comentario')
-        servicio.comentarios = comentario
-        servicio.estado = 'cerrado'
-        servicio.fechaCierre = timezone.now()  # Agregar la fecha de cierre
-        servicio.save()
-        messages.success(request, 'El servicio se ha cerrado correctamente.')
-
-    # Obtener los servicios asignados al usuario actual que estén en estado "abierto"
-    servicios_abiertos = Servicio.objects.filter(responsable=request.user, estado='abierto')
-
-    # Pasar los servicios asignados como contexto al template 'cerrar.html'
-    return render(request, 'cerrar.html', {'servicios_abiertos': servicios_abiertos})
-
-
-
-
-
-######################## VISTAS DE SUPERVISOR ###################################
-def servicios_abiertos(request):
-    # Obtener todos los servicios con estado 'abierto'
-    servicios_abiertos = Servicio.objects.filter(estado='abierto')
-
-    # Pasar los servicios abiertos como contexto al template
-    return render(request, 'servicios_abiertos.html', {'servicios_abiertos': servicios_abiertos})
-
-
-def servicios_cerrados(request):
-    # Obtener todos los servicios con estado 'cerrado'
-    servicios_cerrados = Servicio.objects.filter(estado='cerrado')
-
-    # Pasar los servicios cerrados como contexto al template
-    return render(request, 'servicios_cerrados.html', {'servicios_cerrados': servicios_cerrados})
-
-
-@rol_requerido('supervisor')
-@login_required(login_url='login')
-def supervisor_index(request):
-    return render(request, 'supervisor_index.html')
-
-@rol_requerido('supervisor')
-@login_required(login_url='login')
-def ver_tecnicos(request):
-    # Obtener todos los usuarios técnicos
-    tecnicos = UserTI.objects.all()
-
-    # Pasar los usuarios técnicos como contexto al template 'ver_tecnicos.html'
-    return render(request, 'tecnicos.html', {'tecnicos': tecnicos})
-
-
 
 ######################## VISTAS DE ADMINISTRADOR #######################################################
+
 ######################### VISTA PARA MOSTRAR EL INDEX DEL ADMINISTRADOR #####################333
-@rol_requerido('administrador')
-@login_required(login_url='login')
+@rol_requerido('Administrador')
+@login_required(login_url='login2')
 def admin_index(request):
-    return render(request, 'admin_index.html')
+    # Obtener el nombre de usuario del usuario autenticado
+    username = request.user.username  # Obtiene el nombre de usuario
 
-############################ VISTA PARA DAR DE ALTA A UN AREA DEL  ############################3333
-@requires_csrf_token
-@rol_requerido('tecnico')
-@login_required(login_url='login')
-def dashboard_tecnico(request):
-    # Obtener el usuario actualmente autenticado
-    usuario_actual = request.user
-
-    # Obtener los servicios asignados al usuario actual
-    servicios_asignados = Servicio.objects.filter(responsable=usuario_actual)
-
-    # Renderizar la plantilla del dashboard y pasar los servicios asignados como contexto
-    return render(request, 'dashboard.html', {'servicios_asignados': servicios_asignados})
+    # Pasar el nombre de usuario al contexto de la plantilla
+    return render(request, 'admin_index.html', {'username': username})
 
 
-def alta_area(request):
+#NUEVA ALTA DE AREA Y BAJA ################
+@rol_requerido('Administrador')
+@login_required(login_url='login2')
+def gestion_area(request):
+    # Obtener todas las áreas de la base de datos
+    areas = Area.objects.all()
+
+    # Manejo de las solicitudes POST para agregar o eliminar áreas
     if request.method == 'POST':
-        form = AltaAreaForm(request.POST)
-        if form.is_valid():
-            nombre_area = form.cleaned_data['area']
-            area = Area(nombre=nombre_area)
-            area.save()  # Guardamos la instancia del modelo
+        area_nombre = request.POST.get('area')
+
+        if 'alta-area' in request.POST and area_nombre:
+            # Crear un nuevo área
+            area = Area(nombre=area_nombre)
+            area.save()
             messages.success(request, 'Área creada exitosamente!')
+        
+        elif 'baja-area' in request.POST and area_nombre:
+            # Eliminar el área existente
+            area = get_object_or_404(Area, nombre=area_nombre)
+            area.delete()
+            messages.success(request, 'Área eliminada exitosamente!')
         else:
-            messages.error(request, 'No se ha podido crear el área')
-    else:
-        form = AltaAreaForm()
-    return render(request, 'altaarea.html', {'form': form})
-################ VISTA PARA DAR DE ALTA PROBLEMAS ###########################
-@rol_requerido('administrador')
-@login_required(login_url='login')
-def alta_problemas(request):
+            messages.error(request, 'No se ha podido procesar la solicitud.')
+
+    return render(request, 'gestion_area.html', {'areas': areas})
+
+
+
+######## vista para elimnar probelmas #####
+
+@rol_requerido('Administrador')
+@login_required(login_url='login2')
+def gestionar_problemas(request):
+    problemas = Problemas.objects.all()
+
+    # Manejo del formulario para eliminar problema
     if request.method == 'POST':
-        form = ProblemaForm(request.POST)
-        if form.is_valid():
-            nombre = form.cleaned_data['nombre']
-            nombre = Problema(nombre=nombre)
-            nombre.save()
-            messages.success(request,'El problema se ha agregado exitosamente!')
-        else:
-            messages.error(request, 'No se ha podido agregar el problema')
-    else:
-        form= ProblemaForm()
-    return render(request, 'altaproblemas.html', {'form': form})
+        if 'eliminar' in request.POST:
+            problema_id = request.POST.get('eliminar')
+            problema = get_object_or_404(Problemas, id=problema_id)
+            problema.delete()
+            messages.success(request, 'Problema eliminado exitosamente!')
+            return redirect('gestionar_problemas')  # Redirigir después de eliminar
+        elif 'crear' in request.POST:
+            nombre_problema = request.POST.get('nombre')
+            if nombre_problema:
+                Problemas.objects.create(nombre=nombre_problema)
+                messages.success(request, 'Problema agregado exitosamente!')
+                return redirect('gestionar_problemas')  # Redirigir después de agregar
+
+    return render(request, 'gestionar_problemas.html', {'problemas': problemas})
 
 
 
-######################### VISTA PARA DAR DEL ALTA UN USUARIO GENRICO NO TI DEL CONGRESO #############333
-@rol_requerido('administrador')
-@login_required(login_url='login')
-def agregar_usuario(request):
-    areas = Area.objects.all()  # Obtener todas las áreas para el contexto
-    if request.method == 'POST':
-        form = UsuarioCongresoForm(request.POST)
-        if form.is_valid():
-            usuario = form.save(commit=False)
-            
-            # Verificar si se seleccionó un área
-            if usuario.pertenece:
-                usuario.save()
-                messages.success(request, 'Usuario creado exitosamente!')
-              # Redirigir a la página de éxito
-            else:
-                messages.error(request, 'Debes seleccionar un área.')
-        else:
-            messages.error(request, 'Hubo un error al crear el usuario. Por favor, revisa los datos ingresados.')
-    else:
-        form = UsuarioCongresoForm()
-    
-    return render(request, 'altauser.html', {'form': form, 'areas': areas})
+### vista para dar de baja a user cc ###
+@rol_requerido('Administrador')
+@login_required(login_url='login2')
+@login_required
+def gestionar_usuario_cc(request):
+    usuario_actual = request.user 
+    if request.method == "POST":
+        # Agregar usuario
+        if 'alta-usuario' in request.POST:
+            first_name = request.POST.get('first_name', '').strip()
+            last_name = request.POST.get('last_name', '').strip()
+            rol_id = request.POST.get('rol')
+            email = request.POST.get('email', '').strip()
 
+            if first_name and last_name and email:
+                generated_username = f"{first_name[0].lower()}{last_name.split()[0].lower()}"
+                
+                if not usuarioCC.objects.filter(username=generated_username).exists():
+                    rol = Rol.objects.get(id=rol_id) if rol_id else None
 
-
-##################### VISTA PARA AGREGAR UN NUEVO USUARIO DE TI #################################3333
-@rol_requerido('administrador')
-@login_required(login_url='login')
-def crear_usuario_ti(request):
-    if request.method == 'POST':
-        form = FormUserTICreationForm(request.POST)
-        if form.is_valid():
-            # Get form data
-            first_name = form.cleaned_data['first_name']
-            last_name = form.cleaned_data['last_name']
-            password = form.cleaned_data['password']
-            rol = form.cleaned_data['rol']
-            area = form.cleaned_data['area']
-
-            # Generar el nombre de usuario (username) si first_name y last_name no están vacíos
-            if first_name and last_name:
-                # Tomar la primera letra de first_name y el primer apellido de last_name
-                username = f"{first_name[0].lower()}{last_name.split()[0]}"
-            else:
-                username = None
-
-            try:
-                # Create a new UserTI object
-                nuevo_usuario_ti = UserTI.objects.create_user(
-                    first_name=first_name,
-                    last_name=last_name,
-                    password=password,
-                    username=username,
-                    rol=rol,
-                    area=area
-                )
-                # Mensaje de éxito con el nombre de usuario
-                messages.success(request, f'Usuario "{username}" creado exitosamente!')
-            except Exception as e:
-                messages.error(request, f'Error al crear el usuario')
-        else:
-            messages.error(request, 'Por favor corrige los errores en el formulario.')
-    else:
-        form = FormUserTICreationForm()
-
-    return render(request, 'registro.html', {'form': form})
-
-
-# views.py
-from django.contrib.auth.hashers import make_password
-from django.shortcuts import render, redirect
-from .forms import CambioContraseñaForm
-
-def cambiar_contraseña(request):
-    if request.method == 'POST':
-        form = CambioContraseñaForm(request.POST)
-        try:
-            if form.is_valid():
-                nueva_contraseña = form.cleaned_data['nueva_contraseña']
-                confirmar_contraseña = form.cleaned_data['confirmar_contraseña']
-                if nueva_contraseña != confirmar_contraseña:
-                    messages.error(request, "Las contraseñas no coinciden. Por favor, inténtalo de nuevo.")
+                    nuevo_usuario = usuarioCC.objects.create_user(
+                        username=generated_username,
+                        first_name=first_name,
+                        last_name=last_name,
+                        email=email,
+                        rol=rol
+                    )
+                    
+                    messages.success(request, "Usuario agregado exitosamente.")
                 else:
-                    usuario = form.cleaned_data['usuario']
-                    # Establecer la nueva contraseña en el modelo de usuario
-                    usuario.set_password(nueva_contraseña)
-                    usuario.save()
-                    # Redireccionar a alguna página de éxito
-                    messages.success(request, f'Contraseña actualizada exitosamente!')
-        except Exception as e:
-            messages.error(request, f"Error al cambiar la contraseña: {e}")
-    else:
-        form = CambioContraseñaForm()
-    return render(request, 'contraseña.html', {'form': form})
+                    messages.warning(request, "El usuario ya existe.")
+            else:
+                messages.error(request, "Por favor completa todos los campos obligatorios.")
+
+        # Eliminar usuario
+        elif 'baja-usuario' in request.POST:
+            usuario_id = request.POST.get('usuario_id')
+            try:
+                usuario = usuarioCC.objects.get(id=usuario_id)
+                usuario.delete()
+                messages.success(request, f"Usuario {usuario.username} eliminado exitosamente.")
+            except usuarioCC.DoesNotExist:
+                messages.error(request, "El usuario no existe.")
+
+    
+
+    usuarios = usuarioCC.objects.all()
+    roles = Rol.objects.all()
+    context = {
+        'usuarios': usuarios,
+        'roles': roles,
+    }
+    return render(request, 'baja_usuario.html', context)
 
 
+###vista para crear un servoicio siendo admin######
 
-###################### VISTAS DE USUARIOS ####################################################3333
-#vista para mostrar el index del usuario
-def user_index(request):
-    return render(request, 'user_index.html')
-
-#vistas para dar de alta un servicio
-
-from django.utils import timezone
-from django.core.exceptions import ObjectDoesNotExist
-
-from django.contrib import messages
-
-from random import choice
-
-def crear_servicio(request):
+@rol_requerido('Administrador')
+@login_required(login_url='login2')
+def crear_servicio_admin(request):
     if request.method == 'POST':
-        form = ServicioForm(request.POST)
+        form = ServicioFormExtra(request.POST)
+        
         if form.is_valid():
-            nombre_solicitante = form.cleaned_data['nombreSolicitante']
             descripcion = form.cleaned_data['descripcion']
             area_solicitante = form.cleaned_data['areaSolicitante']
             problema = form.cleaned_data['problema']
-            
-            try:
-                ultimo_servicio = Servicio.objects.latest('id')
-                folio = 'TI{:04d}'.format(ultimo_servicio.id + 1)
-            except ObjectDoesNotExist:
-                folio = 'TI0001'  # Si no hay servicios, asignamos un folio inicial
-            
-            estado = 'abierto'
-            
-            area_problema = problema.nombre.lower()
 
-            # Definir un mapeo de problemas a áreas correspondientes
-            mapeo_problema_area = {
-                'hardware': 'operaciones y servicios',
-                'software': 'desarrollo de software',
-                'conectividad a la red': 'redes y telecomunicaciones',
-                'problemas de impresión': 'operaciones y servicios',
-                'contraseñas': 'operaciones y servicios',
-                'acceso a aplicaciones': 'operaciones y servicios',
-                # Agrega más mapeos según sea necesario
-            }
-            nombre_area = mapeo_problema_area.get(area_problema)
+            # Asignar el username del usuario actual y responsable
+            nombre_solicitante = request.user.username  # Obtener el username del usuario
+            responsable = request.user  # Asignar el usuario actual como responsable
 
-            # Buscar todos los técnicos disponibles en el área correspondiente al problema
-            usuarios_area_disponibles = UserTI.objects.filter(area__nombreArea__iexact=nombre_area, disponibilidad='disponible').order_by('cargaTrabajo')
-
-            if usuarios_area_disponibles.exists():
-                # Si hay técnicos disponibles en el área con disponibilidad "disponible", seleccionar al primero
-                responsable = usuarios_area_disponibles.first()
-            else:
-                # Si no hay técnicos disponibles con disponibilidad "disponible", buscar al que tenga la menor carga de trabajo
-                usuarios_area = UserTI.objects.filter(area__nombreArea__iexact=nombre_area).order_by('cargaTrabajo', 'disponibilidad')
-
-                if usuarios_area.exists():
-                    # Obtener a todos los técnicos con la menor carga de trabajo
-                    min_carga_trabajo = usuarios_area.first().cargaTrabajo
-                    usuarios_min_carga_trabajo = usuarios_area.filter(cargaTrabajo=min_carga_trabajo)
-
-                    if usuarios_min_carga_trabajo.count() > 1:
-                        # Si hay más de un técnico con la menor carga de trabajo, seleccionar uno de manera aleatoria
-                        responsable = choice(usuarios_min_carga_trabajo)
-                    else:
-                        # Si solo hay un técnico con la menor carga de trabajo, seleccionarlo
-                        responsable = usuarios_min_carga_trabajo.first()
-                else:
-                    # Si no hay técnicos disponibles en el área, seleccionar uno de manera aleatoria
-                    responsable = UserTI.objects.order_by('?').first()
-
-            # Aumentar la carga de trabajo del responsable en 1
-            responsable.cargaTrabajo += 1
-            responsable.save()
-            
+            # Crear el servicio con el nombre del solicitante, responsable y estado "en_atención"
             servicio = Servicio.objects.create(
-                folio=folio,
                 nombreSolicitante=nombre_solicitante,
                 descripcion=descripcion,
-                responsable=responsable,
-                problema=problema,
                 areaSolicitante=area_solicitante,
-                estado=estado,
-                fechaCreacion=timezone.now(),
+                problema=problema,
+                responsable=responsable,  # Asignar el responsable 
+                estado='asignado'  # Cambiar el estado a "en_atención"
             )
-            
-            messages.success(request, '¡Servicio creado con éxito! En breve alguien se pondrá en contacto contigo.')
+
+            # No es necesario llamar a servicio.save() aquí, ya que se guardó al crear
+            messages.success(request, 'El servicio se creó exitosamente, recuerde que el servicio lo debe atender usted :).')
+
+        else:
+            messages.error(request, 'Hubo un error en el formulario.')
     else:
         form = ServicioForm()
-    
+
     areas = Area.objects.all()
-    problemas = Problema.objects.all()
+    problemas = Problemas.objects.all()
+
+    return render(request, 'servicio_admin.html', {
+        'form': form,
+        'areas': areas,
+        'problemas': problemas
+    })
+
+
+####prueba 2 de asignacion de servicios en cc ####
+
+# views.py
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+@never_cache
+@rol_requerido('Administrador')
+@login_required(login_url='login2')
+@requires_csrf_token
+def servicios_dashboard(request):
+    # Obtener el usuario actual
+    usuario = request.user
     
-    return render(request, 'servicio.html', {'form': form, 'areas': areas, 'problemas': problemas})
+    # Obtener los servicios asignados al usuario actual, excluyendo los que están en estado "finalizado"
+    mis_servicios = Servicio.objects.filter(responsable=usuario).exclude(estado='finalizado')
+    
+    # Obtener los diferentes tipos de servicios
+    solicitados = Servicio.objects.filter(estado='solicitado')
+    asignados = Servicio.objects.filter(estado='asignado')
+    en_atencion = Servicio.objects.filter(estado='en_atencion')
+    finalizados = Servicio.objects.filter(estado='finalizado')
+
+
+    # Obtener todos los usuarios para el modal de asignación
+    usuarios = usuarioCC.objects.all()
+    
+    context = {
+        'mis_servicios': mis_servicios,
+        'solicitados': solicitados,
+        'asignados': asignados,
+        'en_atencion': en_atencion,
+        'finalizados' : finalizados,
+        'usuarios': usuarios,
+    }
+    
+    return render(request, 'tomar2.html', context)
+
+@rol_requerido('Administrador')
+@login_required(login_url='login2')
+@requires_csrf_token
+def iniciar_atencion(request, servicio_id):
+    servicio = get_object_or_404(Servicio, id=servicio_id)
+    if request.method == 'POST':
+        servicio.estado = 'en_atencion'
+        servicio.save()
+        messages.success(request, 'Se ha iniciado la atención del servicio.')
+    return redirect('servicios_dashboard_act')
+
+@rol_requerido('Administrador')
+@login_required(login_url='login2')
+@requires_csrf_token
+def finalizar_servicio(request, servicio_id):
+    servicio = get_object_or_404(Servicio, id=servicio_id)
+    if request.method == 'POST':
+        comentarios = request.POST.get('comentarios')
+        servicio.comentarios = comentarios
+        servicio.estado = 'finalizado'
+        servicio.fechaCierre = datetime.now()
+        servicio.save()
+        messages.success(request, 'El servicio ha sido finalizado exitosamente.')
+    return redirect('servicios_dashboard_act')
+
+@rol_requerido('Administrador')
+@login_required(login_url='login2')
+@requires_csrf_token
+def tomar_servicio(request, servicio_id):
+    servicio = get_object_or_404(Servicio, id=servicio_id)
+    if request.method == 'POST':
+        servicio.responsable = request.user
+        servicio.estado = 'asignado'
+        servicio.save()
+        messages.success(request, f'Has tomado el servicio {servicio.folio}.')
+    return redirect('servicios_dashboard_act')
+
+@rol_requerido('Administrador')
+@login_required(login_url='login2')
+@requires_csrf_token
+def asignar_servicio(request, servicio_id):
+    servicio = get_object_or_404(Servicio, id=servicio_id)
+    if request.method == 'POST':
+        usuario_id = request.POST.get('usuario')
+        usuario_asignado = get_object_or_404(usuarioCC, id=usuario_id)
+        servicio.responsable = usuario_asignado
+        servicio.estado = 'asignado'
+        servicio.save()
+        messages.success(request, f'Servicio asignado a {usuario_asignado.username}.')
+    return redirect('servicios_dashboard_act')
+
+
+def detalles_servicio(request, servicio_id):
+    servicio = get_object_or_404(Servicio, id=servicio_id)
+    return render(request, 'detalles.html', {'servicio': servicio})
+
+################## VISTAS DE SERVICIO SOCIAL #################################
+
+@rol_requerido('Servicio Social')
+@login_required(login_url='login2')
+def crear_servicio_serv(request):
+    if request.method == 'POST':
+        form = ServicioFormExtra(request.POST)
+        
+        if form.is_valid():
+            descripcion = form.cleaned_data['descripcion']
+            area_solicitante = form.cleaned_data['areaSolicitante']
+            problema = form.cleaned_data['problema']
+
+            # Asignar el username del usuario actual y responsable
+            nombre_solicitante = request.user.username  # Obtener el username del usuario
+            responsable = request.user  # Asignar el usuario actual como responsable
+
+            # Crear el servicio con el nombre del solicitante, responsable y estado "en_atención"
+            servicio = Servicio.objects.create(
+                nombreSolicitante=nombre_solicitante,
+                descripcion=descripcion,
+                areaSolicitante=area_solicitante,
+                problema=problema,
+                responsable=responsable,  # Asignar el responsable 
+                estado='asignado'  # Cambiar el estado a "en_atención"
+            )
+
+            # No es necesario llamar a servicio.save() aquí, ya que se guardó al crear
+            messages.success(request, 'El servicio se creó exitosamente, recuerde que fue al ahcer esto el servicio lo debe atender usted :).')
+
+        else:
+            messages.error(request, 'Hubo un error en el formulario.')
+    else:
+        form = ServicioForm()
+
+    areas = Area.objects.all()
+    problemas = Problemas.objects.all()
+
+    return render(request, 'servicio_serv.html', {
+        'form': form,
+        'areas': areas,
+        'problemas': problemas
+    })
+
+
+
+
+
+@requires_csrf_token
+@rol_requerido('Servicio Social')
+@login_required(login_url='login2')
+def actualizar_servicio_serv(request):
+    # Obtener los servicios asignados al técnico
+    servicios = Servicio.objects.filter(responsable=request.user)
+    return render(request, 'actualizar_serv.html', {'servicios': servicios})
+
+@requires_csrf_token
+@rol_requerido('Servicio Social')
+@login_required(login_url='login2')
+def actualizar_estado_servicio_serv(request, servicio_id):
+    servicio = get_object_or_404(Servicio, id=servicio_id)
+
+    if request.method == 'POST':
+        nuevo_estado = request.POST.get('estado')
+        servicio.estado = nuevo_estado
+        
+        # Si el estado es finalizado, guardar el comentario y la fecha de finalización
+        if nuevo_estado == 'finalizado':
+            comentarios = request.POST.get('comentarios')
+            servicio.comentarios = comentarios  # Guardar comentarios en el servicio
+            servicio.fechaCierre = datetime.now()  # Guardar la hora actual como fecha de finalización
+            
+        servicio.save()
+        messages.success(request, f'Servicio {servicio.folio} ha sido actualizado.')
+
+    return redirect('actualizar_servicio_serv')
+
+
+
+###### gestion de servicios de servicio social
+@requires_csrf_token
+@never_cache
+@login_required(login_url='login2')
+@rol_requerido('Servicio Social')
+def servicios_dashboard_serv(request):
+    # Obtener el usuario actual
+    usuario = request.user
+    
+    # Obtener los servicios asignados al usuario actual, excluyendo los que están en estado "finalizado"
+    mis_servicios = Servicio.objects.filter(responsable=usuario).exclude(estado='finalizado')
+    
+    # Obtener los diferentes tipos de servicios
+    solicitados = Servicio.objects.filter(estado='solicitado')
+    asignados = Servicio.objects.filter(estado='asignado')
+    en_atencion = Servicio.objects.filter(estado='en_atencion')
+    finalizados = Servicio.objects.filter(estado='finalizado')
+
+
+    # Obtener todos los usuarios para el modal de asignación
+    usuarios = usuarioCC.objects.all()
+    
+    context = {
+        'mis_servicios': mis_servicios,
+        'solicitados': solicitados,
+        'asignados': asignados,
+        'en_atencion': en_atencion,
+        'finalizados' : finalizados,
+        'usuarios': usuarios,
+    }
+    
+    return render(request, 'gestion_servicios.html', context)
+
+@login_required
+def iniciar_atencion_serv(request, servicio_id):
+    servicio = get_object_or_404(Servicio, id=servicio_id)
+    if request.method == 'POST':
+        servicio.estado = 'en_atencion'
+        servicio.save()
+        messages.success(request, 'Se ha iniciado la atención del servicio.')
+    return redirect('servicios_dashboard_serv')
+
+@login_required
+def finalizar_servicio_serv(request, servicio_id):
+    servicio = get_object_or_404(Servicio, id=servicio_id)
+    if request.method == 'POST':
+        comentarios = request.POST.get('comentarios')
+        servicio.comentarios = comentarios
+        servicio.estado = 'finalizado'
+        servicio.fechaCierre = datetime.now()
+        servicio.save()
+        messages.success(request, 'El servicio ha sido finalizado exitosamente.')
+    return redirect('servicios_dashboard_serv')
+
+
+def detalles_servicio_serv(request, servicio_id):
+    servicio = get_object_or_404(Servicio, id=servicio_id)
+    return render(request, 'detalles.html', {'servicio': servicio})
+
+
+
+
+
+###################### VISTAS DE USUARIOS ###################################################
+#vistas para dar de alta un servicio
+@never_cache
+@login_required(login_url='ldap_login3')
+def solicitar_servicio(request):
+    if request.method == 'POST':
+        form = ServicioForm(request.POST)
+        
+        if form.is_valid():
+            # Ya no es necesario hacer un .get() en estos casos
+            nombre_solicitante = form.cleaned_data['nombreSolicitante']
+            descripcion = form.cleaned_data['descripcion']
+            area_solicitante = form.cleaned_data['areaSolicitante']  # Esto ya es un objeto Área
+            problema = form.cleaned_data['problema']  # Esto ya es un objeto Problema
+
+            # Crear el servicio
+            servicio = Servicio.objects.create(
+                nombreSolicitante=nombre_solicitante,
+                descripcion=descripcion,
+                areaSolicitante=area_solicitante,  # Ya es el objeto directamente
+                problema=problema  # Ya es el objeto directamente
+            )
+
+            servicio.save()  # Guarda el nuevo servicio
+
+            messages.success(request, 'El servicio se creó exitosamente.')
+            
+
+        else:
+            messages.error(request, 'Hubo un error en el formulario.')
+
+    else:
+        form = ServicioForm()
+
+    # Obtén las áreas y problemas para mostrarlos en el formulario
+    areas = Area.objects.all()
+    problemas = Problemas.objects.all()
+
+    return render(request, 'servicio.html', {
+        'form': form,
+        'areas': areas,
+        'problemas': problemas
+    })
+
+

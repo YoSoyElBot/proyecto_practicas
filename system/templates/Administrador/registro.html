@@ -1,0 +1,71 @@
+{% extends "base_admin.html" %}
+{% load static %}
+
+{% block scripts %}
+{% endblock %}
+
+{% block contenido %}
+<section class="p-3 p-md-4 p-xl-5">
+    <div class="container">
+        <div class="card border-light-subtle shadow-sm">
+            <div class="card-body p-3 p-md-4 p-xl-5">
+                <div class="row">
+                    <div class="col-12">
+                        <h3>Agregar un nuevo usuario:</h3>
+                    </div>
+                </div>
+                {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                    <div class="alert {{ message.tags }}" role="alert">
+                      {{ message }}
+                    </div>
+                  {% endfor %}
+                </div>
+                {% endif %}
+            
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row gy-3 gy-md-4 overflow-hidden">
+                        <!-- Campo de Nombre -->
+                        <div class="col-md-6">
+                            <label for="id_first_name" class="form-label">Nombre(s):</label>
+                            <input type="text" class="form-control" name="first_name" id="id_first_name" placeholder="Nombre" required>
+                        </div>
+
+                        <!-- Campo de Apellido -->
+                        <div class="col-md-6">
+                            <label for="id_last_name" class="form-label">Apellido(s):</label>
+                            <input type="text" class="form-control" name="last_name" id="id_last_name" placeholder="Apellido" required>
+                        </div>
+
+                        <!-- Campo de Email -->
+                        <div class="col-md-6">
+                            <label for="id_email" class="form-label">Correo Electrónico:</label>
+                            <input type="email" class="form-control" name="email" id="id_email" placeholder="Correo electrónico" required>
+                        </div>
+
+                        <!-- Campo de Rol -->
+                        <div class="col-md-6">
+                            <label for="id_rol" class="form-label">Rol:</label>
+                            <select class="form-control" name="rol" id="id_rol" required>
+                                <option value="" disabled selected>Selecciona el rol correspondiente:</option>
+                                {% for rol in form.rol.field.queryset %}
+                                    <option value="{{ rol.id }}">{{ rol.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Botón de Enviar -->
+                        <div class="col-12">
+                            <div class="d-grid">
+                                <button class="btn bsb-btn-xl btn-primary" type="submit">Agregar Usuario</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

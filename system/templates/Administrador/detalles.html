@@ -1,0 +1,15 @@
+
+{% load static %}
+
+{% block contenido %}
+<div>
+    <h5>Folio: {{ servicio.folio }}</h5>
+    <p><strong>Área Solicitante:</strong> {{ servicio.areaSolicitante }}</p>
+    <p><strong>Solicitante:</strong> {{ servicio.nombreSolicitante }}</p>
+    <p><strong>Problema:</strong> {{ servicio.problema }}</p>
+    <p><strong>Estado:</strong> {{ servicio.estado }}</p>
+    <p><strong>Responsable:</strong> {{ servicio.responsable }}</p>
+    <p><strong>Fecha Cierre:</strong> {{ servicio.fechaCierre|date:"d/m/Y H:i" }}</p>
+    <p><strong>Comentarios:</strong> {{ servicio.comentarios }}</p>
+</div>
+{% endblock %}

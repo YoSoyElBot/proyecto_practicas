@@ -28,7 +28,6 @@ SECRET_KEY = 'django-insecure-%qrf(0s0+(og$l2^bo^#a_##zxarzg1+f7#4b)sn&ahu9z=6!h
 DEBUG = True
 ALLOWED_HOSTS = ['*']
 
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -38,9 +37,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'userCongreso',
-    'user',
+    'usuarioFEI',
+    'usuario',
+    'crispy_forms',
+
 ]
+CRISPY_TEMPLATE_PACK = 'bootstrap4'
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -50,6 +53,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+
 ]
 
 ROOT_URLCONF = 'system.urls'
@@ -59,11 +64,11 @@ TEMPLATES = [
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
             BASE_DIR.joinpath('system/templates/login'),
-            BASE_DIR.joinpath('system/templates/administradores'),  # Admin templates
-            BASE_DIR.joinpath('system/templates/tecnicos'),        # Technician templates
-            BASE_DIR.joinpath('system/templates/usuarios'),       # User templates
-            BASE_DIR.joinpath('system/templates/soporte'),       # User templates
-            BASE_DIR.joinpath('system/templates/supervisor'),       # User templates
+            BASE_DIR.joinpath('system/templates/Administrador'),  # Templates de administrador
+            BASE_DIR.joinpath('system/templates/Técnico Académico'),        # Templates de Técnico Académico
+            BASE_DIR.joinpath('system/templates/Servicio Social'),        # Templates de Servicio Social
+            BASE_DIR.joinpath('system/templates/usuarioFEI'),       # Templates de Usuarios FEI
+            BASE_DIR.joinpath('system/templates/soporte'),       # Templates de soporte
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -103,7 +108,7 @@ MESSAGE_TAGS = {
 }
 
 
-AUTH_USER_MODEL = 'user.UserTI'
+AUTH_USER_MODEL = 'usuario.usuarioCC'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
@@ -116,7 +121,7 @@ AUTH_USER_MODEL = 'user.UserTI'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'CONGRESO',
+        'NAME': 'CC',
         'USER': 'django-admin',
         'PASSWORD': 'admin12345',
         'HOST': 'localhost',
@@ -151,11 +156,11 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'es-mx'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Mexico_City'
+USE_TZ = True
 
 USE_I18N = True
 
-USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
@@ -176,5 +181,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_REDIRECT_URL = '/login/'
 
 
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Expira la sesión al cerrar el navegador
+
 #cookie de sesion para que expire en 30 minutos
-SESSION_COOKIE_AGE = 1800
+SESSION_COOKIE_AGE = 10

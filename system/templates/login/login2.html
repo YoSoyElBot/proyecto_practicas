@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block contenido %}
+<section class="min-vh-100 d-flex align-items-center" style="background-color: #f0f2f5;">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-md-8 col-lg-6">
+                <div class="card border-0 shadow-lg" style="border-radius: 1rem;">
+                    <div class="card-body p-5">
+                        <h2 class="text-center mb-5" style="color: #1a73e8;">Bienvenido</h2>
+                        
+                        <div class="text-center mb-4">
+                            <img class="img-fluid rounded-circle" src="{% static 'imgs/michi.jpeg' %}" alt="Imagen de ejemplo" style="width: 150px; height: 150px; object-fit: cover;">
+                        </div>
+                        
+                        {% if messages %}
+                        <div class="messages mb-4">
+                            {% for message in messages %}
+                            <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %} rounded-pill" role="alert">
+                                {{ message }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <form method="post" action="{% url 'ldap_login' %}">
+                            {% csrf_token %}
+                            <div class="mb-4">
+                                <label for="email" class="form-label">Correo electrónico</label>
+                                <input type="email" class="form-control form-control-lg rounded-pill" name="email" id="email" placeholder="usuario@estudiantes.uv.mx, usuario@uv.mx" required>
+                            </div>
+                            <div class="mb-4">
+                                <label for="password" class="form-label">Contraseña</label>
+                                <input type="password" class="form-control form-control-lg rounded-pill" name="password" id="password" required>
+                            </div>
+                            <div class="d-grid">
+                                <button class="btn btn-primary btn-lg rounded-pill" type="submit" style="background-color: #1a73e8; border: none;">Entrar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

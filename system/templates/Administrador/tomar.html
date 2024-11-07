@@ -1,0 +1,220 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% block contenido %}
+
+<section class="p-3 p-md-4 p-xl-5">
+    <div class="container">
+        <div class="card border-light-subtle shadow-sm">
+            <div class="card-body p-3 p-md-4 p-xl-5">
+                <h2 class="mb-4">Gestión de Servicios</h2>
+
+                <!-- Navegación de pestañas -->
+                <ul class="nav nav-tabs mb-4" id="serviciosTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link {% if request.path == '/actualizar_servicio_admin/' %}active{% endif %}" 
+                           id="mis-servicios-tab" 
+                           href="{% url 'actualizar_servicio_admin' %}" 
+                           role="tab">
+                            Mis servicios
+                        </a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link {% if estado == 'solicitado' %}active{% endif %}" 
+                           id="solicitados-tab" 
+                           href="{% url 'listar_servicios' %}?estado=solicitado" 
+                           role="tab">
+                            Solicitados
+                        </a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link {% if estado == 'asignado' %}active{% endif %}" 
+                           id="asignados-tab" 
+                           href="{% url 'listar_servicios' %}?estado=asignado" 
+                           role="tab">
+                            Asignados
+                        </a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link {% if estado == 'en_atencion' %}active{% endif %}" 
+                           id="en-atencion-tab" 
+                           href="{% url 'listar_servicios' %}?estado=en_atencion" 
+                           role="tab">
+                            En Atención
+                        </a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link {% if estado == 'finalizado' %}active{% endif %}" 
+                           id="finalizados-tab" 
+                           href="{% url 'listar_servicios' %}?estado=finalizado" 
+                           role="tab">
+                            Finalizados
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Contenido de las pestañas -->
+                <div class="tab-content" id="serviciosTabContent">
+                    <!-- Tab de Mis Servicios -->
+                    {% if request.path == '/actualizar_servicio_admin/' %}
+                    <div class="tab-pane fade show active" id="mis-servicios" role="tabpanel">
+                        <h3 class="mb-4">Mis Servicios Asignados</h3>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Folio</th>
+                                        <th>Nombre del solicitante</th>
+                                        <th>Descripción</th>
+                                        <th>Área solicitante</th>
+                                        <th>Estado actual</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for servicio in servicios %}
+                                    {% if servicio.estado == "asignado" or servicio.estado == "en_atencion" %}
+                                    <tr>
+                                        <td>{{ servicio.folio }}</td>
+                                        <td>{{ servicio.nombreSolicitante }}</td>
+                                        <td>{{ servicio.descripcion }}</td>
+                                        <td>{{ servicio.areaSolicitante }}</td>
+                                        <td>
+                                            <span class="badge {% if servicio.estado == 'asignado' %}bg-warning{% else %}bg-info{% endif %}">{{ servicio.estado }}</span>
+                                        </td>
+                                        <td>
+                                            {% if servicio.estado == "asignado" %}
+                                            <form method="post" action="{% url 'actualizar_estado_servicio_admin' servicio.id %}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="estado" value="en_atencion">
+                                                <button type="submit" class="btn btn-warning btn-sm">Iniciar Atención</button>
+                                            </form>
+                                            {% elif servicio.estado == "en_atencion" %}
+                                            <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#finalizarModal{{ servicio.id }}">
+                                                Finalizar Servicio
+                                            </button>
+                                            
+                                            <!-- Modal para finalizar servicio -->
+                                            <div class="modal fade" id="finalizarModal{{ servicio.id }}" tabindex="-1" aria-hidden="true">
+                                                <div class="modal-dialog">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title">Finalizar Servicio</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        </div>
+                                                        <form method="post" action="{% url 'actualizar_estado_servicio_admin' servicio.id %}">
+                                                            {% csrf_token %}
+                                                            <div class="modal-body">
+                                                                <input type="hidden" name="estado" value="finalizado">
+                                                                <div class="mb-3">
+                                                                    <label for="comentarios_{{ servicio.id }}" class="form-label">Comentarios:</label>
+                                                                    <textarea id="comentarios_{{ servicio.id }}" name="comentarios" class="form-control" required></textarea>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                                <button type="submit" class="btn btn-success">Finalizar</button>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endif %}
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="6" class="text-center">No hay servicios asignados.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% else %}
+                    <!-- Tab de Servicios Disponibles -->
+                    <div class="tab-pane fade show active" id="servicios-disponibles" role="tabpanel">
+                        <h3 class="mb-4">Servicios {{ estado|title }}</h3>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Folio</th>
+                                        <th>Nombre del solicitante</th>
+                                        <th>Descripción</th>
+                                        <th>Responsable</th>
+                                        <th>Área solicitante</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for servicio in servicios %}
+                                    <tr>
+                                        <td>{{ servicio.folio }}</td>
+                                        <td>{{ servicio.nombreSolicitante }}</td>
+                                        <td>{{ servicio.descripcion }}</td>
+                                        <td>{{ servicio.responsable|default:"Sin asignar" }}</td>
+                                        <td>{{ servicio.areaSolicitante }}</td>
+                                        <td>
+                                            {% if estado == "solicitado" %}
+                                            <div class="btn-group">
+                                                <form method="post" action="{% url 'tomar_servicio' servicio.id %}" class="me-2">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-primary btn-sm"
+                                                            onclick="return confirm('¿Está seguro de que desea tomar este servicio?')">
+                                                        Tomar Servicio
+                                                    </button>
+                                                </form>
+                                                <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#asignarModal{{ servicio.id }}">
+                                                    Asignar
+                                                </button>
+                                            </div>
+
+                                            <!-- Modal para Asignar Servicio -->
+                                            <div class="modal fade" id="asignarModal{{ servicio.id }}" tabindex="-1" aria-hidden="true">
+                                                <div class="modal-dialog">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title">Asignar Servicio</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        </div>
+                                                        <form method="post" action="{% url 'asignar_servicio' servicio.id %}">
+                                                            {% csrf_token %}
+                                                            <div class="modal-body">
+                                                                <div class="mb-3">
+                                                                    <label for="usuarioAsignado" class="form-label">Seleccionar Responsable:</label>
+                                                                    <select name="usuarioAsignado" class="form-select" required>
+                                                                        {% for usuario in usuarios_asignables %}
+                                                                        <option value="{{ usuario.id }}">{{ usuario.username }}</option>
+                                                                        {% endfor %}
+                                                                    </select>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                                <button type="submit" class="btn btn-success">Asignar</button>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="6" class="text-center">No hay servicios disponibles.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

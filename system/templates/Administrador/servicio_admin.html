@@ -1,0 +1,60 @@
+{% extends "base_admin.html" %}
+{% load static %}
+
+{% block contenido %}
+<section class="p-3 p-md-4 p-xl-5">
+    <div class="container">
+        <div class="card border-light shadow-sm">
+            <div class="card-body p-3 p-md-4 p-xl-5">
+                <div class="row justify-content-center">
+                    <div class="col-12 mb-4">
+                        <h3 class="text-center">Registrar un nuevo servicio:</h3>
+                    </div>
+                </div>
+                {% if messages %}
+                <div class="messages mb-4">
+                    {% for message in messages %}
+                    <div class="alert {{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                <form method="post" action="{% url 'crear_servicio_admin' %}">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="id_areaSolicitante" class="form-label">Área Solicitante:</label>
+                            <select class="form-select" name="areaSolicitante" id="id_areaSolicitante" required>
+                                <option value="" disabled selected>Seleccione un área</option>
+                                {% for area in areas %}
+                                    <option value="{{ area.id }}">{{ area.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_problema" class="form-label">Tipo de problema:</label>
+                            <select class="form-select" name="problema" id="id_problema" required>
+                                <option value="" disabled selected>Seleccione un problema</option>
+                                {% for problema in problemas %}
+                                    <option value="{{ problema.id }}">{{ problema.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_descripcion" class="form-label">Descripción:</label>
+                            <textarea class="form-control" name="descripcion" id="id_descripcion" placeholder="Describa brevemente su problema" rows="4" required></textarea>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-grid mt-3">
+                                <button class="btn btn-primary btn-lg" type="submit">Generar servicio</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

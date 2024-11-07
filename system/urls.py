@@ -23,43 +23,59 @@ from django.contrib.auth import views as auth_views
 urlpatterns = [
     path('admin/', admin.site.urls), 
 
-    path('registro/' , views.crear_usuario_ti, name='registro'),
+    path('gestionar_usuarios/', views.gestionar_usuario_cc, name='gestionar_usuario_cc'),
 
-    path('login/' , views.login_view, name='login'),
+    path('login2/', views.ldap_login_view, name='ldap_login'),
 
-    path('tec_index/' , views.tec_index,name='tec_index'),
+    path('login/', views.ldap_login3_view, name='ldap_login3'),  # URL para la vista de inicio de sesión
 
     path('admin_index/' , views.admin_index,name='admin_index'),
 
     path('error/' , views.errores, name='error'),
 
     path('cerrar-sesion/', views.cerrar_sesion, name='cerrar-sesion'),
+    
+    path('cerrar-sesion2/', views.cerrar_sesion2, name='cerrar-sesion2'),
 
-    path('alta_area/' , views.alta_area, name='alta-area'),
+    path('gestionar_area/', views.gestion_area, name='gestionar_area'),
 
-    path('agregar/' , views.agregar_usuario, name='agregar'),
+    path('gestionar_problemas/', views.gestionar_problemas, name='gestionar_problemas'),
 
-    path('' , views.user_index, name= 'user_index'),
+    path('crear_servicio/', views.crear_servicio_admin, name='crear_servicio_admin'),
+   
 
-    path('user_index/' , views.user_index, name= 'user_index'),
+    #Vista para que los del servicio soaicl puedan cerrar sus servicios
+    path('actualizar_serv/' , views.actualizar_servicio_serv, name='actualizar_servicio_serv'),
 
-    path('servicio/' , views.crear_servicio, name='crear_servicio'),
+    #que a la vez la vista de arriba hace uso de esta funcion para cambiar el estado de los servicios
+    path('servicio/<int:servicio_id>/actualizar_servicio_social/', views.actualizar_estado_servicio_serv, name='actualizar_estado_servicio_serv'),
 
-    path('alta_problemas/' , views.alta_problemas, name='alta_problemas'),
-
-    path('dashboard/' , views.dashboard_tecnico, name='dashboard_tecnico'),
-
-    path('cerrar/' , views.cerrar_servicio, name='cerrar_servicio'),
-
-    path('servicios_abiertos/', views.servicios_abiertos),
-
-    path('servicios_cerrados/' , views.servicios_cerrados),
-
-    path('supervisor_index/' , views.supervisor_index, name='supervisor_index'),
-
-    path('tecnicos/' , views.ver_tecnicos),
-
-    path('cambio_contraseña/', views.cambiar_contraseña, name='csrf_error'),
 
     path('csrf_error/', views.csrf_error_view, name='csrf_error'),
+    
+    path('crear_servicio_serv/', views.crear_servicio_serv, name='crear_servicio_serv'),
+    
+    path('solicitar_servicio/' , views.solicitar_servicio, name='solicitar_servicio_user'),
+    ##prueba 2###
+
+    path('dashboard_act/', views.servicios_dashboard, name='servicios_dashboard_act'),
+    path('iniciar-atencion/<int:servicio_id>/', views.iniciar_atencion, name='iniciar_atencion'),
+    path('finalizar/<int:servicio_id>/', views.finalizar_servicio, name='finalizar_servicio'),
+    path('tomar/<int:servicio_id>/', views.tomar_servicio, name='tomar_servicio'),
+    path('asignar/<int:servicio_id>/', views.asignar_servicio, name='asignar_servicio'),
+    path('detalles_servicio/<int:servicio_id>/', views.detalles_servicio, name='detalles_servicio'),
+
+
+
+    path('dashboard_actividades/', views.servicios_dashboard_serv, name='servicios_dashboard_serv'),
+    path('iniciar_atencion_serv/<int:servicio_id>/', views.iniciar_atencion_serv, name='iniciar_atencion_serv'),
+    path('finalizar_servicio/<int:servicio_id>/', views.finalizar_servicio_serv, name='finalizar_servicio_serv'),
+    path('detalles_servicio/<int:servicio_id>/', views.detalles_servicio_serv, name='detalles_servicio_serv'),
+
+
+
+
+
+
 ]
+
