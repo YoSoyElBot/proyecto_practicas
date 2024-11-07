@@ -29,8 +29,6 @@ urlpatterns = [
 
     path('login/', views.ldap_login3_view, name='ldap_login3'),  # URL para la vista de inicio de sesión
 
-    path('admin_index/' , views.admin_index,name='admin_index'),
-
     path('error/' , views.errores, name='error'),
 
     path('cerrar-sesion/', views.cerrar_sesion, name='cerrar-sesion'),
@@ -43,12 +41,6 @@ urlpatterns = [
 
     path('crear_servicio/', views.crear_servicio_admin, name='crear_servicio_admin'),
    
-
-    #Vista para que los del servicio soaicl puedan cerrar sus servicios
-    path('actualizar_serv/' , views.actualizar_servicio_serv, name='actualizar_servicio_serv'),
-
-    #que a la vez la vista de arriba hace uso de esta funcion para cambiar el estado de los servicios
-    path('servicio/<int:servicio_id>/actualizar_servicio_social/', views.actualizar_estado_servicio_serv, name='actualizar_estado_servicio_serv'),
 
 
     path('csrf_error/', views.csrf_error_view, name='csrf_error'),

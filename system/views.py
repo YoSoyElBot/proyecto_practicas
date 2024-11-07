@@ -146,7 +146,7 @@ def ldap_login_view(request):
                 elif user.rol and user.rol.nombre == 'Administrador':
                     return redirect('servicios_dashboard_act')
                 elif user.rol and user.rol.nombre == 'Servicio Social':
-                    return redirect('servicios_dashboard_act_serv')
+                    return redirect('servicios_dashboard_serv')
                 else:
                     messages.error(request, 'Rol de usuario no reconocido.')
 
@@ -223,17 +223,11 @@ def csrf_error_view(request):
 ######################## VISTAS DE ADMINISTRADOR #######################################################
 
 ######################### VISTA PARA MOSTRAR EL INDEX DEL ADMINISTRADOR #####################333
-@rol_requerido('Administrador')
-@login_required(login_url='login2')
-def admin_index(request):
-    # Obtener el nombre de usuario del usuario autenticado
-    username = request.user.username  # Obtiene el nombre de usuario
 
-    # Pasar el nombre de usuario al contexto de la plantilla
-    return render(request, 'admin_index.html', {'username': username})
 
 
 #NUEVA ALTA DE AREA Y BAJA ################
+@never_cache
 @rol_requerido('Administrador')
 @login_required(login_url='login2')
 def gestion_area(request):
@@ -263,7 +257,7 @@ def gestion_area(request):
 
 
 ######## vista para elimnar probelmas #####
-
+@never_cache
 @rol_requerido('Administrador')
 @login_required(login_url='login2')
 def gestionar_problemas(request):
@@ -289,9 +283,9 @@ def gestionar_problemas(request):
 
 
 ### vista para dar de baja a user cc ###
+@never_cache
 @rol_requerido('Administrador')
 @login_required(login_url='login2')
-@login_required
 def gestionar_usuario_cc(request):
     usuario_actual = request.user 
     if request.method == "POST":
@@ -344,7 +338,7 @@ def gestionar_usuario_cc(request):
 
 
 ###vista para crear un servoicio siendo admin######
-
+@never_cache
 @rol_requerido('Administrador')
 @login_required(login_url='login2')
 def crear_servicio_admin(request):
@@ -481,8 +475,11 @@ def detalles_servicio(request, servicio_id):
     servicio = get_object_or_404(Servicio, id=servicio_id)
     return render(request, 'detalles.html', {'servicio': servicio})
 
-################## VISTAS DE SERVICIO SOCIAL #################################
 
+
+
+################## VISTAS DE SERVICIO SOCIAL #################################
+@never_cache
 @rol_requerido('Servicio Social')
 @login_required(login_url='login2')
 def crear_servicio_serv(request):
@@ -524,39 +521,6 @@ def crear_servicio_serv(request):
         'areas': areas,
         'problemas': problemas
     })
-
-
-
-
-
-@requires_csrf_token
-@rol_requerido('Servicio Social')
-@login_required(login_url='login2')
-def actualizar_servicio_serv(request):
-    # Obtener los servicios asignados al técnico
-    servicios = Servicio.objects.filter(responsable=request.user)
-    return render(request, 'actualizar_serv.html', {'servicios': servicios})
-
-@requires_csrf_token
-@rol_requerido('Servicio Social')
-@login_required(login_url='login2')
-def actualizar_estado_servicio_serv(request, servicio_id):
-    servicio = get_object_or_404(Servicio, id=servicio_id)
-
-    if request.method == 'POST':
-        nuevo_estado = request.POST.get('estado')
-        servicio.estado = nuevo_estado
-        
-        # Si el estado es finalizado, guardar el comentario y la fecha de finalización
-        if nuevo_estado == 'finalizado':
-            comentarios = request.POST.get('comentarios')
-            servicio.comentarios = comentarios  # Guardar comentarios en el servicio
-            servicio.fechaCierre = datetime.now()  # Guardar la hora actual como fecha de finalización
-            
-        servicio.save()
-        messages.success(request, f'Servicio {servicio.folio} ha sido actualizado.')
-
-    return redirect('actualizar_servicio_serv')
 
 
 
